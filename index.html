@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AlphaEdge — AI Investment Research Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070a0f;--bg2:#0d1117;--surface:#141c24;--surface2:#1a2433;
+  --border:#1e2d3d;--border2:#243447;--text:#e2eaf4;--text2:#8ba3bf;--text3:#526a84;
+  --accent:#00d4ff;--gold:#f0b429;--green:#00e599;--red:#ff4d6a;--purple:#a855f7;--orange:#fb923c;
+  --fh:'Syne',sans-serif;--fb:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);overflow:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.dot-live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;display:inline-block}
+.spinner{width:15px;height:15px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.card:hover{border-color:var(--border2)}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .2s;border:1px solid transparent}
+.nav:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nav.on{color:var(--accent);background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.15)}
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500}
+.tg{background:rgba(0,229,153,.12);color:var(--green);border:1px solid rgba(0,229,153,.2)}
+.tr{background:rgba(255,77,106,.12);color:var(--red);border:1px solid rgba(255,77,106,.2)}
+.ty{background:rgba(240,180,41,.12);color:var(--gold);border:1px solid rgba(240,180,41,.2)}
+.tb{background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.2)}
+.tp{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.2)}
+.ticker{font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.2);font-family:var(--fb)}
+.btn{background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:8px 16px;font-family:var(--fb);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
+.btn:hover{background:#00bbdd}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.ghost{background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-family:var(--fb);font-size:11px;cursor:pointer;transition:all .2s}
+.ghost:hover,.ghost.on{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06)}
+.chip{padding:5px 12px;border-radius:20px;font-size:11px;cursor:pointer;transition:all .2s;border:1px solid var(--border);color:var(--text2);background:transparent;white-space:nowrap}
+.chip.on{border-color:var(--gold);color:var(--gold);background:rgba(240,180,41,.08)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:9px 12px;color:var(--text3);font-weight:400;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid rgba(30,45,61,.5);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+textarea,input{background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--fb);font-size:12px;padding:8px 12px;outline:none;width:100%;transition:border-color .2s;resize:none}
+textarea:focus,input:focus{border-color:var(--accent)}
+.sbar{background:var(--bg2);height:4px;border-radius:2px;overflow:hidden;width:50px}
+.sfill{height:100%;border-radius:2px;transition:width .8s ease}
+.ai-msg{animation:slideUp .3s ease}
+.ai-msg p{margin-bottom:10px;line-height:1.75}
+.ai-msg ul{margin:6px 0 10px 16px}
+.ai-msg li{margin-bottom:5px;line-height:1.7}
+.ai-msg h3{color:var(--accent);font-family:var(--fh);font-size:13px;margin:14px 0 6px}
+.ai-msg h4{color:var(--gold);font-size:12px;margin:10px 0 5px;font-weight:500}
+.ai-msg strong{color:var(--text);font-weight:600}
+.ai-msg em{color:var(--green);font-style:italic}
+.ai-msg code{background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef}=React;
+
+const INDICES=[
+  {n:"NIFTY 50",v:"24,362.80",c:"+187.40",p:"+0.78%",up:true},
+  {n:"SENSEX",v:"80,218.37",c:"+641.12",p:"+0.81%",up:true},
+  {n:"NIFTY BANK",v:"52,140.60",c:"-124.30",p:"-0.24%",up:false},
+  {n:"NIFTY MID",v:"18,840.25",c:"+312.70",p:"+1.69%",up:true},
+  {n:"NIFTY IT",v:"39,520.10",c:"+890.40",p:"+2.31%",up:true},
+];
+const TOP=[
+  {t:"BAJFINANCE",n:"Bajaj Finance",sec:"NBFC",p:"7,218",c:"+3.2%",up:true,h:"1Y",s:88,tag:"Growth"},
+  {t:"HDFCBANK",n:"HDFC Bank",sec:"Banking",p:"1,642",c:"+1.1%",up:true,h:"10Y",s:91,tag:"Compounder"},
+  {t:"INFY",n:"Infosys Ltd",sec:"IT",p:"1,847",c:"+2.8%",up:true,h:"1Y",s:84,tag:"Momentum"},
+  {t:"TITAN",n:"Titan Company",sec:"Consumer",p:"3,290",c:"-0.4%",up:false,h:"10Y",s:87,tag:"Quality"},
+  {t:"DEEPAKNTR",n:"Deepak Nitrite",sec:"Chemicals",p:"2,614",c:"+5.7%",up:true,h:"3M",s:79,tag:"Hidden Gem"},
+  {t:"CDSL",n:"CDSL",sec:"Financials",p:"1,188",c:"+1.9%",up:true,h:"1Y",s:82,tag:"Growth"},
+];
+const STOCKS=[
+  {t:"RELIANCE",n:"Reliance Industries",sec:"Conglomerate",p:"2,946",mc:"19.9L Cr",pe:28.4,roe:"9.8%",d:"Low",r:"BUY",s:83,c:"+0.6%",up:true},
+  {t:"TCS",n:"Tata Consultancy Svc",sec:"IT",p:"4,121",mc:"15.0L Cr",pe:31.2,roe:"53.4%",d:"Nil",r:"HOLD",s:78,c:"+1.3%",up:true},
+  {t:"WIPRO",n:"Wipro Ltd",sec:"IT",p:"462",mc:"2.4L Cr",pe:21.8,roe:"15.6%",d:"Low",r:"BUY",s:72,c:"+2.1%",up:true},
+  {t:"PAGEIND",n:"Page Industries",sec:"Consumer",p:"44,320",mc:"0.49L Cr",pe:58.7,roe:"78.3%",d:"Nil",r:"BUY",s:85,c:"+0.8%",up:true},
+  {t:"DMART",n:"Avenue Supermarts",sec:"Retail",p:"4,780",mc:"3.1L Cr",pe:86.4,roe:"18.9%",d:"Very Low",r:"HOLD",s:76,c:"-1.2%",up:false},
+  {t:"SBILIFE",n:"SBI Life Insurance",sec:"Insurance",p:"1,572",mc:"1.6L Cr",pe:64.1,roe:"12.4%",d:"Nil",r:"HOLD",s:69,c:"-0.3%",up:false},
+];
+const HEAT=[
+  {n:"IT",v:2.31},{n:"Banking",v:-0.24},{n:"FMCG",v:0.87},{n:"Auto",v:1.42},
+  {n:"Pharma",v:-0.61},{n:"Metals",v:0.34},{n:"Energy",v:-1.12},{n:"Chemicals",v:2.78},
+  {n:"Infra",v:1.89},{n:"NBFC",v:1.54},{n:"Telecom",v:0.23},{n:"Realty",v:3.12},
+];
+const NEWS=[
+  {t:"09:42",h:"RBI holds repo rate at 6.5%, signals accommodative stance",s:"positive",sec:"Banking"},
+  {t:"10:15",h:"IT exports hit record $254B in FY24; sector outlook upgraded",s:"positive",sec:"IT"},
+  {t:"11:02",h:"FII net buyers Rs.3,420 Cr; 7th consecutive day of inflows",s:"positive",sec:"Macro"},
+  {t:"11:47",h:"Bajaj Finance Q4 AUM growth 35% YoY beats estimates",s:"positive",sec:"NBFC"},
+  {t:"12:30",h:"Crude oil rises 1.8% on OPEC supply cut extension",s:"negative",sec:"Energy"},
+  {t:"13:05",h:"Pharma sector faces US FDA import alert headwinds",s:"negative",sec:"Pharma"},
+  {t:"14:20",h:"PLI scheme driving auto ancillary exports - ACMA report",s:"positive",sec:"Auto"},
+  {t:"15:10",h:"Nifty IT breaks above 200-DMA on strong global tech rally",s:"positive",sec:"IT"},
+];
+const FUNDS=[
+  {m:"Radhakishan Damani",p:["HDFC Bank","VST Industries","India Cements","Avenue Supermarts"],style:"Value"},
+  {m:"Rakesh Jhunjhunwala (RARE)",p:["Titan Company","Star Health","Nazara Tech","Canara Bank"],style:"Growth"},
+  {m:"Dolly Khanna",p:["Rain Industries","Deepak Fertilisers","NOCIL","Nilkamal"],style:"Contrarian"},
+  {m:"Porinju Veliyath",p:["Geojit Fin Svcs","Kerala Ayurveda","Oriental Carbon","Kellton Tech"],style:"Small Cap"},
+];
+const SECTORS=["All","Banking","IT","FMCG","Pharma","Auto","Chemicals","Infra","NBFC","Consumer","Energy"];
+const NAVS=[
+  {id:"home",label:"Dashboard",icon:"⊞"},
+  {id:"discover",label:"Stock Discovery",icon:"⌕"},
+  {id:"analysis",label:"Stock Analysis",icon:"⟆"},
+  {id:"agent",label:"AI Agent",icon:"✦"},
+  {id:"funds",label:"Fund Tracker",icon:"⊛"},
+  {id:"news",label:"News & Sentiment",icon:"⊜"},
+];
+
+const Ring=({score,size=56})=>{
+  const r=(size/2)-5,circ=2*Math.PI*r,dash=(score/100)*circ;
+  const col=score>=80?"var(--green)":score>=60?"var(--gold)":"var(--red)";
+  return(
+    <div style={{position:"relative",width:size,height:size,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
+      <svg width={size} height={size} style={{position:"absolute"}}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth="3"/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth="3"
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`}/>
+      </svg>
+      <span style={{fontSize:size*.22,fontWeight:700,color:col,fontFamily:"var(--fh)"}}>{score}</span>
+    </div>
+  );
+};
+
+const Spark=({up,w=80,h=28})=>{
+  const pts=[];for(let i=0;i<12;i++)pts.push(i===0?100:pts[i-1]+(Math.random()*10-(up?3:7)));
+  const mn=Math.min(...pts),mx=Math.max(...pts);
+  const d=pts.map((v,i)=>`${(i/11)*w},${h-((v-mn)/(mx-mn||1))*h}`).join(" ");
+  return <svg width={w} height={h}><polyline points={d} fill="none" stroke={up?"var(--green)":"var(--red)"} strokeWidth="1.5" strokeLinecap="round"/></svg>;
+};
+
+const ScoreBar=({score})=>{
+  const col=score>=80?"var(--green)":"var(--gold)";
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div className="sbar"><div className="sfill" style={{width:`${score}%`,background:col}}/></div>
+      <span style={{fontSize:11,fontWeight:600,color:col}}>{score}</span>
+    </div>
+  );
+};
+
+function Home(){
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+        {INDICES.map(i=>(
+          <div key={i.n} className="card" style={{padding:"11px 13px"}}>
+            <div style={{fontSize:9,color:"var(--text3)",marginBottom:3,textTransform:"uppercase",letterSpacing:".06em"}}>{i.n}</div>
+            <div style={{fontSize:13,fontWeight:700,fontFamily:"var(--fh)"}}>{i.v}</div>
+            <div style={{fontSize:11,color:i.up?"var(--green)":"var(--red)",marginTop:2}}>{i.c} ({i.p})</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
+        <div className="card" style={{padding:"15px 18px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:14}}>Top AI Picks Today</div>
+            <span className="dot-live"/>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            {TOP.map(s=>(
+              <div key={s.t} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 9px",background:"var(--bg2)",borderRadius:7}}>
+                <div style={{width:34,height:34,borderRadius:6,background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"var(--accent)"}}>{s.t.slice(0,4)}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:600}}>{s.n}</div>
+                  <div style={{fontSize:10,color:"var(--text3)"}}>{s.sec} · {s.h}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:12,fontWeight:600}}>Rs.{s.p}</div>
+                  <div style={{fontSize:11,color:s.up?"var(--green)":"var(--red)"}}>{s.c}</div>
+                </div>
+                <Ring score={s.s} size={38}/>
+                <span className={`tag ${s.tag==="Hidden Gem"?"tp":s.tag==="Compounder"?"ty":s.tag==="Momentum"?"tb":"tg"}`}>{s.tag}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card" style={{padding:"15px 18px"}}>
+          <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:14,marginBottom:12}}>Sector Heatmap</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}}>
+            {HEAT.map(s=>{
+              const bg=s.v>2?"rgba(0,229,153,.25)":s.v>0.5?"rgba(0,229,153,.13)":s.v>0?"rgba(0,229,153,.06)":s.v>-1?"rgba(255,77,106,.08)":"rgba(255,77,106,.2)";
+              return(
+                <div key={s.n} style={{background:bg,border:`1px solid ${s.v>=0?"rgba(0,229,153,.15)":"rgba(255,77,106,.15)"}`,borderRadius:5,padding:"6px 8px"}}>
+                  <div style={{fontSize:10,fontWeight:600,fontFamily:"var(--fh)"}}>{s.n}</div>
+                  <div style={{fontSize:10,color:s.v>=0?"var(--green)":"var(--red)"}}>{s.v>0?"+":""}{s.v}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+        {[
+          {l:"Market Sentiment",v:"BULLISH",ic:"⚡",col:"var(--green)",note:"72/100"},
+          {l:"FII Activity",v:"+Rs.3,420 Cr",ic:"↑",col:"var(--green)",note:"7-Day Buying Streak"},
+          {l:"New 52W Highs",v:"187 stocks",ic:"◎",col:"var(--accent)",note:"vs 42 lows"},
+          {l:"AI Opportunities",v:"23 picks",ic:"★",col:"var(--gold)",note:"High confidence"},
+        ].map(m=>(
+          <div key={m.l} className="card" style={{padding:"13px 15px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em"}}>{m.l}</span>
+              <span style={{color:m.col}}>{m.ic}</span>
+            </div>
+            <div style={{fontSize:16,fontWeight:700,color:m.col,fontFamily:"var(--fh)"}}>{m.v}</div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>{m.note}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{padding:"13px 18px",background:"rgba(255,77,106,.04)",borderColor:"rgba(255,77,106,.15)"}}>
+        <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.7}}>
+          <strong style={{color:"var(--text2)"}}>Disclaimer:</strong> This platform provides AI-assisted market analysis and is <strong style={{color:"var(--gold)"}}>not financial advice</strong>. All recommendations are algorithmic and probabilistic. Investments are subject to market risks. Please consult a SEBI-registered advisor before investing.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Discover(){
+  const [sec,setSec]=useState("All");
+  const [hor,setHor]=useState("1 Year");
+  const filtered=sec==="All"?STOCKS:STOCKS.filter(s=>s.sec===sec);
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{flex:1,minWidth:180}}><input placeholder="Search stocks, sectors, themes..."/></div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {["1 Month","3 Months","1 Year","10 Years"].map(h=>(
+            <button key={h} className={`ghost ${hor===h?"on":""}`} onClick={()=>setHor(h)}>{h}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {SECTORS.map(s=>(
+          <button key={s} className={`chip ${sec===s?"on":""}`} onClick={()=>setSec(s)}>{s}</button>
+        ))}
+      </div>
+      <div className="card" style={{overflow:"hidden"}}>
+        <div style={{overflowX:"auto"}}>
+          <table>
+            <thead>
+              <tr><th>#</th><th>Stock</th><th>Sector</th><th>Price</th><th>Chg</th><th>Mkt Cap</th><th>P/E</th><th>ROE</th><th>Debt</th><th>Score</th><th>Trend</th><th>Rating</th></tr>
+            </thead>
+            <tbody>
+              {filtered.map((s,i)=>(
+                <tr key={s.t}>
+                  <td style={{color:"var(--text3)",fontSize:10}}>{i+1}</td>
+                  <td><div><span className="ticker">{s.t}</span><div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{s.n}</div></div></td>
+                  <td style={{fontSize:11,color:"var(--text2)"}}>{s.sec}</td>
+                  <td style={{fontWeight:500}}>Rs.{s.p}</td>
+                  <td style={{fontSize:12,fontWeight:500,color:s.up?"var(--green)":"var(--red)"}}>{s.c}</td>
+                  <td style={{fontSize:11,color:"var(--text2)"}}>{s.mc}</td>
+                  <td>{s.pe}</td>
+                  <td style={{color:"var(--green)"}}>{s.roe}</td>
+                  <td><span className={`tag ${s.d==="Nil"||s.d==="Very Low"?"tg":"ty"}`}>{s.d}</span></td>
+                  <td><ScoreBar score={s.s}/></td>
+                  <td><Spark up={s.up}/></td>
+                  <td><span className={`tag ${s.r==="BUY"?"tg":s.r==="HOLD"?"ty":"tr"}`}>{s.r}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Analysis(){
+  const scoreItems=[
+    {l:"Fundamental",s:88,col:"var(--green)"},
+    {l:"Technical",s:76,col:"var(--accent)"},
+    {l:"Valuation",s:72,col:"var(--gold)"},
+    {l:"Sentiment",s:82,col:"var(--purple)"},
+  ];
+  const swot={
+    S:["India's #1 consumer lending NBFC","Best-in-class underwriting models","47M+ customer franchise","Strong tech infrastructure"],
+    W:["Elevated credit costs in rural segment","Valuation premium (PE 30x)","India-only concentration"],
+    O:["Credit penetration at just 18%","Premiumization of consumer spending","Digital lending expansion"],
+    T:["NBFC regulatory tightening","Rising bank competition","NPA risk in macro slowdown"],
+  };
+  const slabels={S:["Strengths","var(--green)"],W:["Weaknesses","var(--red)"],O:["Opportunities","var(--accent)"],T:["Threats","var(--orange)"]};
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div className="card" style={{padding:"18px 22px"}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:18,flexWrap:"wrap"}}>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+              <span className="ticker" style={{fontSize:12,padding:"3px 10px"}}>BAJFINANCE</span>
+              <span className="tag tg">BUY</span><span className="tag tb">NBFC</span>
+            </div>
+            <div style={{fontFamily:"var(--fh)",fontSize:20,fontWeight:800}}>Bajaj Finance Ltd</div>
+            <div style={{display:"flex",gap:20,marginTop:10,flexWrap:"wrap"}}>
+              <div><div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em"}}>CMP</div><div style={{fontSize:20,fontWeight:700}}>Rs.7,218</div><div style={{fontSize:11,color:"var(--green)"}}>+3.2% today</div></div>
+              <div><div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em"}}>Intrinsic Value</div><div style={{fontSize:20,fontWeight:700,color:"var(--green)"}}>Rs.8,450</div><div style={{fontSize:11,color:"var(--green)"}}>+17.1% upside</div></div>
+              <div><div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em"}}>AI Confidence</div><div style={{fontSize:20,fontWeight:700,color:"var(--gold)"}}>84%</div><div style={{fontSize:11,color:"var(--text3)"}}>High conviction</div></div>
+            </div>
+          </div>
+          <Ring score={84} size={76}/>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+        {scoreItems.map(s=>(
+          <div key={s.l} className="card" style={{padding:"13px 15px"}}>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".06em"}}>{s.l}</div>
+            <div style={{fontSize:22,fontWeight:700,color:s.col,fontFamily:"var(--fh)"}}>{s.s}</div>
+            <div style={{background:"var(--bg2)",height:4,borderRadius:2,marginTop:8}}><div style={{height:"100%",borderRadius:2,width:`${s.s}%`,background:s.col,transition:"width .8s"}}/></div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="card" style={{padding:"15px 18px"}}>
+          <div style={{fontFamily:"var(--fh)",fontWeight:700,marginBottom:12,fontSize:13}}>Key Metrics</div>
+          {[["Revenue Growth (3Y)","31.4% CAGR","g"],["Net Profit Growth","40.2% CAGR","g"],["ROE","21.8%","g"],["ROCE","12.4%","g"],["Debt/Equity","3.8x (NBFC norm)","n"],["Promoter Holding","55.9%","g"],["FII Holding","18.2%","g"],["P/E (TTM)","30.2x","n"]].map(([l,v,t])=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(30,45,61,.5)"}}>
+              <span style={{fontSize:11,color:"var(--text2)"}}>{l}</span>
+              <span style={{fontSize:12,fontWeight:500,color:t==="g"?"var(--green)":"var(--text)"}}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{padding:"15px 18px"}}>
+          <div style={{fontFamily:"var(--fh)",fontWeight:700,marginBottom:12,fontSize:13}}>SWOT Analysis</div>
+          {Object.entries(swot).map(([k,items])=>(
+            <div key={k} style={{marginBottom:10}}>
+              <div style={{fontSize:10,color:slabels[k][1],fontWeight:600,marginBottom:3}}>{k} — {slabels[k][0]}</div>
+              {items.map(i=><div key={i} style={{fontSize:11,color:"var(--text2)",paddingLeft:8,lineHeight:1.6}}>· {i}</div>)}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="card" style={{padding:"15px 18px"}}>
+        <div style={{fontFamily:"var(--fh)",fontWeight:700,marginBottom:12,fontSize:13}}>Horizon Suitability</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+          {[{h:"1 Month",s:62,note:"Volatility; awaiting Q1",col:"var(--gold)"},{h:"3 Months",s:75,note:"Post-result momentum",col:"var(--accent)"},{h:"1 Year",s:88,note:"Strong earnings growth",col:"var(--green)"},{h:"10 Years",s:91,note:"Category compounder",col:"var(--green)"}].map(h=>(
+            <div key={h.h} style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,padding:"12px",textAlign:"center"}}>
+              <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>{h.h}</div>
+              <div style={{fontSize:22,fontWeight:700,color:h.col,fontFamily:"var(--fh)"}}>{h.s}</div>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:5,lineHeight:1.5}}>{h.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Agent(){
+  const [q,setQ]=useState("");
+  const [msgs,setMsgs]=useState([{role:"assistant",content:"Hello! I am your AI Investment Research Agent — combining Buffett-style fundamental analysis, Graham's margin of safety, Lynch's growth investing, and quantitative modeling.\n\nAsk me anything about Indian or global stocks.\n\n**Try:**\n- Analyze Bajaj Finance for long-term investment\n- Best hidden gems in mid-cap chemicals\n- Compare HDFC Bank vs ICICI Bank\n- Build a 10-year compounding portfolio"}]);
+  const [loading,setLoading]=useState(false);
+  const endRef=useRef(null);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
+
+  const sys=`You are an elite AI Investment Research Agent for Indian and global stock markets combining Warren Buffett, Benjamin Graham, Peter Lynch, and Quantitative Analysis. For every stock analysis provide: fundamental metrics (ROE, ROCE, PE, debt, cash flows, promoter holding), valuation assessment with intrinsic value estimate, business quality and moat, risk factors, investment horizon suitability for 1M/3M/1Y/10Y, a confidence score 0-100, and BUY/HOLD/AVOID recommendation with clear reasoning. Use Rs. for Indian prices. Be specific with numbers. Always end responses with: This is AI-assisted research, not financial advice. Investments are subject to market risk.`;
+
+  const send=async()=>{
+    if(!q.trim()||loading)return;
+    const um={role:"user",content:q};
+    setMsgs(m=>[...m,um]);setQ("");setLoading(true);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:sys,messages:[...msgs,um].map(m=>({role:m.role,content:m.content}))})
+      });
+      const data=await res.json();
+      const text=data.content?.map(b=>b.text||"").join("")||"Unable to generate response.";
+      setMsgs(m=>[...m,{role:"assistant",content:text}]);
+    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:"Connection error. Please try again."}]);}
+    setLoading(false);
+  };
+
+  const fmt=t=>t
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g,"<em>$1</em>")
+    .replace(/^### (.+)$/gm,"<h3>$1</h3>")
+    .replace(/^## (.+)$/gm,"<h3>$1</h3>")
+    .replace(/^- (.+)$/gm,"<li>$1</li>")
+    .replace(/`(.+?)`/g,"<code>$1</code>")
+    .replace(/\n\n/g,"</p><p>")
+    .replace(/^(?!<)/,"<p>")+"</p>";
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+      <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:10,background:"var(--bg2)"}}>
+        <div style={{width:30,height:30,borderRadius:7,background:"linear-gradient(135deg,var(--accent),var(--purple))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✦</div>
+        <div><div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13}}>AI Research Agent</div><div style={{fontSize:10,color:"var(--text3)"}}>Buffett · Graham · Lynch · Quant</div></div>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}><span className="dot-live"/><span style={{fontSize:10,color:"var(--green)"}}>LIVE</span></div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:18,display:"flex",flexDirection:"column",gap:14,minHeight:0}}>
+        {msgs.map((m,i)=>(
+          <div key={i} className="ai-msg" style={{display:"flex",gap:10,flexDirection:m.role==="user"?"row-reverse":"row"}}>
+            <div style={{width:26,height:26,borderRadius:6,flexShrink:0,background:m.role==="user"?"var(--accent)":"linear-gradient(135deg,var(--accent),var(--purple))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"white",fontWeight:700}}>{m.role==="user"?"U":"AI"}</div>
+            <div style={{maxWidth:"84%",background:m.role==="user"?"rgba(0,212,255,.1)":"var(--surface)",border:`1px solid ${m.role==="user"?"rgba(0,212,255,.2)":"var(--border)"}`,borderRadius:10,padding:"11px 13px",fontSize:12.5,color:"var(--text2)",fontFamily:"var(--fb)"}}
+              dangerouslySetInnerHTML={{__html:fmt(m.content)}}/>
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:"flex",gap:10}}>
+            <div style={{width:26,height:26,borderRadius:6,background:"linear-gradient(135deg,var(--accent),var(--purple))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"white",fontWeight:700}}>AI</div>
+            <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:8}}>
+              <div className="spinner"/><span style={{fontSize:12,color:"var(--text3)"}}>Analyzing markets...</span>
+            </div>
+          </div>
+        )}
+        <div ref={endRef}/>
+      </div>
+      <div style={{padding:"12px 16px",borderTop:"1px solid var(--border)",background:"var(--bg2)"}}>
+        <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+          {["Analyze HDFCBANK","Best 10Y compounders","Hidden gems mid-cap"].map(s=>(
+            <button key={s} onClick={()=>setQ(s)} style={{padding:"3px 9px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,fontSize:10,color:"var(--text3)",cursor:"pointer"}}>{s}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <textarea value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}}} placeholder="Ask about any stock, sector, or investment theme..." rows={2} style={{flex:1}}/>
+          <button className="btn" onClick={send} disabled={loading||!q.trim()}>Send</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Funds(){
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+        {[{l:"Smart Money Stocks",v:"847",col:"var(--gold)"},{l:"New Additions (30D)",v:"+124",col:"var(--green)"},{l:"Net Institutional Flow",v:"Rs.8,420 Cr",col:"var(--accent)"}].map(m=>(
+          <div key={m.l} className="card" style={{padding:"14px 18px"}}>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:6}}>{m.l}</div>
+            <div style={{fontSize:20,fontWeight:700,color:m.col,fontFamily:"var(--fh)"}}>{m.v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {FUNDS.map(fm=>(
+          <div key={fm.m} className="card" style={{padding:"15px 18px"}}>
+            <div style={{marginBottom:10}}>
+              <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13}}>{fm.m}</div>
+              <span className={`tag ${fm.style==="Value"?"ty":fm.style==="Growth"?"tg":"tb"}`}>{fm.style} Investor</span>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              {fm.p.map(s=>(
+                <div key={s} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"var(--bg2)",borderRadius:5}}>
+                  <span style={{fontSize:12}}>{s}</span>
+                  <span style={{fontSize:10,color:"var(--text3)"}}>Holdings</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{padding:"15px 18px"}}>
+        <div style={{fontFamily:"var(--fh)",fontWeight:700,marginBottom:12,fontSize:13}}>FII/DII Activity — Last 10 Sessions</div>
+        <div style={{display:"flex",gap:4,alignItems:"flex-end",height:72}}>
+          {[3420,-1240,5670,2100,-890,4320,6780,-2340,3890,5120].map((v,i)=>(
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+              <div style={{width:"100%",borderRadius:"3px 3px 0 0",height:`${Math.abs(v)/6780*55}px`,background:v>0?"var(--green)":"var(--red)",opacity:.8,minHeight:4}}/>
+              <div style={{fontSize:8,color:"var(--text3)"}}>D{i+1}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewsScreen(){
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+        {[{l:"Market Sentiment",v:"BULLISH",col:"var(--green)",s:72},{l:"Global Sentiment",v:"NEUTRAL",col:"var(--gold)",s:51},{l:"Social Trend",v:"POSITIVE",col:"var(--accent)",s:68}].map(m=>(
+          <div key={m.l} className="card" style={{padding:"14px 18px",textAlign:"center"}}>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>{m.l}</div>
+            <div style={{fontFamily:"var(--fh)",fontWeight:800,fontSize:15,color:m.col}}>{m.v}</div>
+            <div style={{background:"var(--bg2)",height:4,borderRadius:2,marginTop:8}}><div style={{height:"100%",borderRadius:2,width:`${m.s}%`,background:m.col,transition:"width .8s"}}/></div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>{m.s}/100</div>
+          </div>
+        ))}
+      </div>
+      <div className="card" style={{overflow:"hidden"}}>
+        <div style={{padding:"13px 17px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8}}>
+          <span className="dot-live"/><span style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13}}>Live Market News</span>
+        </div>
+        {NEWS.map((n,i)=>(
+          <div key={i} style={{padding:"11px 17px",borderBottom:i<NEWS.length-1?"1px solid rgba(30,45,61,.5)":"none",display:"flex",gap:12,alignItems:"flex-start"}}>
+            <span style={{fontSize:10,color:"var(--text3)",whiteSpace:"nowrap",marginTop:2}}>{n.t}</span>
+            <div style={{flex:1,fontSize:12.5,lineHeight:1.5}}>{n.h}</div>
+            <div style={{display:"flex",gap:5,flexShrink:0}}>
+              <span className={`tag ${n.s==="positive"?"tg":"tr"}`}>{n.s}</span>
+              <span className="tag tb">{n.sec}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const [screen,setScreen]=useState("home");
+  const cur=NAVS.find(n=>n.id===screen);
+  const render=()=>{
+    if(screen==="home")return <Home/>;
+    if(screen==="discover")return <Discover/>;
+    if(screen==="analysis")return <Analysis/>;
+    if(screen==="agent")return <Agent/>;
+    if(screen==="funds")return <Funds/>;
+    if(screen==="news")return <NewsScreen/>;
+  };
+  return(
+    <div style={{display:"flex",height:"100vh",background:"var(--bg)",overflow:"hidden"}}>
+      {/* Sidebar */}
+      <div style={{width:210,background:"var(--bg2)",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",flexShrink:0}}>
+        <div style={{padding:"18px 15px 14px",borderBottom:"1px solid var(--border)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:32,height:32,borderRadius:7,background:"linear-gradient(135deg,var(--accent),var(--purple))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>⟆</div>
+            <div>
+              <div style={{fontFamily:"var(--fh)",fontWeight:800,fontSize:14,color:"var(--text)"}}>AlphaEdge</div>
+              <div style={{fontSize:9,color:"var(--text3)",letterSpacing:".08em"}}>AI RESEARCH PLATFORM</div>
+            </div>
+          </div>
+        </div>
+        <div style={{padding:"10px 7px",flex:1,overflowY:"auto"}}>
+          <div style={{fontSize:9,color:"var(--text3)",letterSpacing:".1em",padding:"4px 7px",marginBottom:3}}>MAIN MENU</div>
+          {NAVS.map(n=>(
+            <div key={n.id} className={`nav ${screen===n.id?"on":""}`} onClick={()=>setScreen(n.id)}>
+              <span>{n.icon}</span><span>{n.label}</span>
+            </div>
+          ))}
+          <div style={{fontSize:9,color:"var(--text3)",letterSpacing:".1em",padding:"14px 7px 4px",marginBottom:3}}>TOOLS</div>
+          {[{id:"pb",label:"Portfolio Builder",ic:"⊟"},{id:"al",label:"Alerts",ic:"⊘"},{id:"st",label:"Settings",ic:"⚙"}].map(n=>(
+            <div key={n.id} className="nav"><span>{n.ic}</span><span>{n.label}</span></div>
+          ))}
+        </div>
+        <div style={{padding:"11px 15px",borderTop:"1px solid var(--border)",background:"rgba(0,212,255,.04)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span className="dot-live"/><span style={{fontSize:10,color:"var(--green)"}}>Markets Open</span></div>
+          <div style={{fontSize:9,color:"var(--text3)"}}>NSE · BSE · 09:15 – 15:30 IST</div>
+        </div>
+      </div>
+      {/* Main */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{padding:"13px 22px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14,background:"var(--bg2)",flexShrink:0}}>
+          <div>
+            <div style={{fontFamily:"var(--fh)",fontWeight:800,fontSize:16}}>{cur?.label}</div>
+            <div style={{fontSize:10,color:"var(--text3)"}}>{screen==="agent"?"Powered by Claude AI · Buffett + Graham + Lynch":"NSE · BSE · Indian & Global Markets · Real-time Analysis"}</div>
+          </div>
+          <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+            <div style={{fontSize:11,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:6,padding:"5px 11px",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:9,color:"var(--text3)"}}>NIFTY 50</span>
+              <span style={{fontWeight:600}}>24,362</span>
+              <span style={{color:"var(--green)",fontSize:11}}>+0.78%</span>
+            </div>
+            <button className="btn" onClick={()=>setScreen("agent")}>✦ Ask AI</button>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:screen==="agent"?"hidden":"auto",padding:screen==="agent"?0:"18px 22px",display:"flex",flexDirection:"column"}}>
+          {screen==="agent"
+            ?<div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0}}><Agent/></div>
+            :render()
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
