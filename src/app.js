@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+/* eslint-disable */
+import React, { useState, useEffect, useRef } from "react";
 
 // ── Fonts & Global Styles ──────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -258,7 +259,7 @@ const FUND_MANAGER_HOLDINGS = [
 const NEWS_ITEMS = [
   { time: "09:42", headline: "RBI holds repo rate at 6.5%, signals accommodative stance", sentiment: "positive", sector: "Banking" },
   { time: "10:15", headline: "IT exports hit record $254B in FY24; sector outlook upgraded", sentiment: "positive", sector: "IT" },
-  { time: "11:02", headline: "FII net buyers ₹3,420 Cr; 7th consecutive day of inflows", sentiment: "positive", sector: "Macro" },
+  { time: "11:02", headline: "FII net buyers Rs.3,420 Cr; 7th consecutive day of inflows", sentiment: "positive", sector: "Macro" },
   { time: "11:47", headline: "Bajaj Finance Q4 AUM growth 35% YoY beats estimates", sentiment: "positive", sector: "NBFC" },
   { time: "12:30", headline: "Crude oil rises 1.8% on OPEC supply cut extension", sentiment: "negative", sector: "Energy" },
   { time: "13:05", headline: "Pharma sector faces US FDA import alert headwinds", sentiment: "negative", sector: "Pharma" },
@@ -390,7 +391,7 @@ When analyzing stocks/markets:
 6. Assign a CONFIDENCE SCORE (0-100)
 7. Give BUY / HOLD / AVOID recommendation with clear reasoning
 
-Format responses with clear sections using headers. Use ₹ for Indian prices. Be specific with numbers.
+Format responses with clear sections using headers. Use Rs. for Indian prices. Be specific with numbers.
 
 Always end with: ⚠️ *This is AI-assisted research, not financial advice. Investments are subject to market risk.*`;
 
@@ -571,7 +572,7 @@ const StockDiscovery = () => {
                     </div>
                   </td>
                   <td style={{ color: "var(--text2)", fontSize: 11 }}>{s.sector}</td>
-                  <td style={{ fontWeight: 500 }}>₹{s.price}</td>
+                  <td style={{ fontWeight: 500 }}>Rs.{s.price}</td>
                   <td className={s.up ? "up" : "down"} style={{ fontSize: 12, fontWeight: 500 }}>{s.change}</td>
                   <td style={{ color: "var(--text2)", fontSize: 11 }}>{s.mktCap}</td>
                   <td style={{ color: "var(--text)" }}>{s.pe}</td>
@@ -635,12 +636,12 @@ const StockAnalysis = () => {
             <div style={{ display: "flex", gap: 20, marginTop: 12, flexWrap: "wrap" }}>
               <div className="stat-block">
                 <span className="stat-label">CMP</span>
-                <span className="stat-value" style={{ fontSize: 22, fontWeight: 700 }}>₹{stock.price}</span>
+                <span className="stat-value" style={{ fontSize: 22, fontWeight: 700 }}>Rs.{stock.price}</span>
                 <span className={`stat-change ${stock.up ? "up" : "down"}`}>{stock.change} today</span>
               </div>
               <div className="stat-block">
                 <span className="stat-label">Intrinsic Value</span>
-                <span className="stat-value" style={{ color: "var(--green)" }}>₹{stock.intrinsic}</span>
+                <span className="stat-value" style={{ color: "var(--green)" }}>Rs.{stock.intrinsic}</span>
                 <span className="stat-change up">{stock.upside} upside</span>
               </div>
               <div className="stat-block">
@@ -730,7 +731,7 @@ const FundTracker = () => (
       {[
         { label: "Total Smart Money Stocks", val: "847", icon: "star", color: "var(--gold)" },
         { label: "New Additions (30D)", val: "+124", icon: "arrow_up", color: "var(--green)" },
-        { label: "Net Institutional Flow", val: "₹8,420 Cr", icon: "target", color: "var(--accent)" },
+        { label: "Net Institutional Flow", val: "Rs.8,420 Cr", icon: "target", color: "var(--accent)" },
       ].map(m => (
         <div key={m.label} className="card" style={{ padding: "16px 20px", display: "flex", gap: 14, alignItems: "center" }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: `${m.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -864,7 +865,7 @@ const HomeDashboard = () => (
                 <div style={{ fontSize: 10, color: "var(--text3)" }}>{s.sector} · {s.horizon}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>₹{s.price}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Rs.{s.price}</div>
                 <div style={{ fontSize: 11, color: s.up ? "var(--green)" : "var(--red)" }}>{s.change}</div>
               </div>
               <ScoreRing score={s.score} size={40} />
@@ -883,7 +884,7 @@ const HomeDashboard = () => (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
       {[
         { label: "Market Sentiment", val: "BULLISH", icon: "zap", color: "var(--green)", note: "72/100" },
-        { label: "FII Activity", val: "+₹3,420 Cr", icon: "arrow_up", color: "var(--green)", note: "7 Day Buying Streak" },
+        { label: "FII Activity", val: "+Rs.3,420 Cr", icon: "arrow_up", color: "var(--green)", note: "7 Day Buying Streak" },
         { label: "New 52W Highs", val: "187 stocks", icon: "target", color: "var(--accent)", note: "vs 42 lows" },
         { label: "AI Opportunities", val: "23 picks", icon: "star", color: "var(--gold)", note: "High confidence" },
       ].map(m => (
