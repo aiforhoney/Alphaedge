@@ -511,9 +511,240 @@ function NewsScreen(){
   );
 }
 
+function PortfolioBuilder(){
+  const universe=[
+    {t:"HDFCBANK",n:"HDFC Bank",sec:"Banking",risk:"Low",cagr:14,score:91},
+    {t:"INFY",n:"Infosys",sec:"IT",risk:"Low",cagr:16,score:84},
+    {t:"BAJFINANCE",n:"Bajaj Finance",sec:"NBFC",risk:"Medium",cagr:22,score:88},
+    {t:"TITAN",n:"Titan Company",sec:"Consumer",risk:"Medium",cagr:20,score:87},
+    {t:"DEEPAKNTR",n:"Deepak Nitrite",sec:"Chemicals",risk:"Medium",cagr:18,score:79},
+    {t:"PAGEIND",n:"Page Industries",sec:"Consumer",risk:"Low",cagr:17,score:85},
+    {t:"CDSL",n:"CDSL",sec:"Financials",risk:"Medium",cagr:19,score:82},
+    {t:"RELIANCE",n:"Reliance Inds",sec:"Conglomerate",risk:"Low",cagr:13,score:83},
+    {t:"WIPRO",n:"Wipro",sec:"IT",risk:"Low",cagr:14,score:72},
+    {t:"DMART",n:"Avenue Supermarts",sec:"Retail",risk:"Low",cagr:15,score:76},
+  ];
+  const [amount,setAmount]=useState("100000");
+  const [horizon,setHorizon]=useState("5");
+  const [riskPref,setRiskPref]=useState("Moderate");
+  const [sip,setSip]=useState("5000");
+  const [portfolio,setPortfolio]=useState(null);
+  const [aiLoading,setAiLoading]=useState(false);
+  const [aiNote,setAiNote]=useState("");
+
+  const buildPortfolio=()=>{
+    const filtered=riskPref==="Conservative"
+      ?universe.filter(s=>s.risk==="Low")
+      :riskPref==="Aggressive"
+      ?universe
+      :universe.filter(s=>s.risk!=="High");
+    const top=filtered.sort((a,b)=>b.score-a.score).slice(0,6);
+    const weights=riskPref==="Conservative"?[30,20,18,14,10,8]:riskPref==="Aggressive"?[25,20,18,15,12,10]:[28,20,18,14,12,8];
+    const inv=parseFloat(amount)||100000;
+    const result=top.map((s,i)=>({
+      ...s,
+      weight:weights[i],
+      invested:Math.round(inv*weights[i]/100),
+      shares:Math.round((inv*weights[i]/100)/(parseFloat(s.t==="HDFCBANK"?1642:s.t==="INFY"?1847:s.t==="BAJFINANCE"?7218:s.t==="TITAN"?3290:s.t==="DEEPAKNTR"?2614:s.t==="PAGEIND"?44320:s.t==="CDSL"?1188:s.t==="RELIANCE"?2946:s.t==="WIPRO"?462:4780))),
+    }));
+    setPortfolio(result);
+    setAiNote("");
+  };
+
+  const getAiThesis=async()=>{
+    if(!portfolio)return;
+    setAiLoading(true);
+    const sys="You are an expert portfolio advisor for Indian equity markets. Given a portfolio, write a concise 3-4 sentence investment thesis covering: diversification quality, expected CAGR, key risks, and one actionable tip. Keep it sharp and data-driven.";
+    const prompt=`Portfolio: ${portfolio.map(s=>`${s.n} (${s.weight}%, ${s.sec}, AI Score ${s.score})`).join(", ")}. Investment: Rs.${amount}, Horizon: ${horizon} years, Risk: ${riskPref}. Write the thesis.`;
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,system:sys,messages:[{role:"user",content:prompt}]})
+      });
+      const data=await res.json();
+      setAiNote(data.content?.map(b=>b.text||"").join("")||"");
+    }catch(e){setAiNote("Could not generate thesis. Please try again.");}
+    setAiLoading(false);
+  };
+
+  const yrs=parseFloat(horizon)||5;
+  const sipAmt=parseFloat(sip)||5000;
+  const avgCagr=portfolio?portfolio.reduce((a,s)=>a+s.cagr*s.weight/100,0):16;
+  const lumpsumFinal=portfolio?Math.round(parseFloat(amount||0)*Math.pow(1+avgCagr/100,yrs)):0;
+  const sipFinal=Math.round(sipAmt*12*((Math.pow(1+avgCagr/100,yrs)-1)/(avgCagr/100)));
+  const sectors=portfolio?[...new Set(portfolio.map(s=>s.sec))]:[];
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* Inputs */}
+      <div className="card" style={{padding:"16px 20px"}}>
+        <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:14,marginBottom:14}}>⊟ Portfolio Builder — Configure Your Investment</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:14}}>
+          <div>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>LUMP SUM AMOUNT (Rs.)</div>
+            <input value={amount} onChange={e=>setAmount(e.target.value)} placeholder="100000"/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>MONTHLY SIP (Rs.)</div>
+            <input value={sip} onChange={e=>setSip(e.target.value)} placeholder="5000"/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>TIME HORIZON (YEARS)</div>
+            <input value={horizon} onChange={e=>setHorizon(e.target.value)} placeholder="5"/>
+          </div>
+          <div>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>RISK APPETITE</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:2}}>
+              {["Conservative","Moderate","Aggressive"].map(r=>(
+                <button key={r} className={`ghost ${riskPref===r?"on":""}`} style={{padding:"5px 10px",fontSize:10}} onClick={()=>setRiskPref(r)}>{r}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button className="btn" onClick={buildPortfolio} style={{width:"100%",justifyContent:"center",padding:"10px"}}>
+          ✦ Build AI Portfolio
+        </button>
+      </div>
+
+      {portfolio&&(
+        <>
+          {/* Summary Cards */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+            {[
+              {l:"Total Investment",v:`Rs.${parseInt(amount).toLocaleString("en-IN")}`,col:"var(--accent)"},
+              {l:`Value in ${horizon}Y (Lumpsum)`,v:`Rs.${lumpsumFinal.toLocaleString("en-IN")}`,col:"var(--green)"},
+              {l:`SIP Value in ${horizon}Y`,v:`Rs.${sipFinal.toLocaleString("en-IN")}`,col:"var(--gold)"},
+              {l:"Expected CAGR",v:`~${avgCagr.toFixed(1)}%`,col:"var(--purple)"},
+            ].map(m=>(
+              <div key={m.l} className="card" style={{padding:"13px 15px"}}>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>{m.l}</div>
+                <div style={{fontSize:16,fontWeight:700,color:m.col,fontFamily:"var(--fh)"}}>{m.v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Allocation Table */}
+          <div className="card" style={{overflow:"hidden"}}>
+            <div style={{padding:"13px 17px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13}}>Suggested Allocation</div>
+              <div style={{display:"flex",gap:6}}>
+                {sectors.map(s=><span key={s} className="tag tb">{s}</span>)}
+              </div>
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table>
+                <thead>
+                  <tr><th>#</th><th>Stock</th><th>Sector</th><th>Weight</th><th>Amount</th><th>Risk</th><th>Est. CAGR</th><th>AI Score</th><th>Allocation Bar</th></tr>
+                </thead>
+                <tbody>
+                  {portfolio.map((s,i)=>(
+                    <tr key={s.t}>
+                      <td style={{color:"var(--text3)",fontSize:10}}>{i+1}</td>
+                      <td><span className="ticker">{s.t}</span><div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{s.n}</div></td>
+                      <td style={{fontSize:11,color:"var(--text2)"}}>{s.sec}</td>
+                      <td style={{fontWeight:700,color:"var(--accent)",fontSize:14}}>{s.weight}%</td>
+                      <td style={{color:"var(--green)",fontWeight:500}}>Rs.{s.invested.toLocaleString("en-IN")}</td>
+                      <td><span className={`tag ${s.risk==="Low"?"tg":s.risk==="Medium"?"ty":"tr"}`}>{s.risk}</span></td>
+                      <td style={{color:"var(--green)"}}>{s.cagr}% p.a.</td>
+                      <td>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <div style={{background:"var(--bg2)",height:4,borderRadius:2,width:50}}><div style={{height:"100%",borderRadius:2,width:`${s.score}%`,background:"var(--green)"}}/></div>
+                          <span style={{fontSize:11,fontWeight:600,color:"var(--green)"}}>{s.score}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{background:"var(--bg2)",height:8,borderRadius:4,width:80}}><div style={{height:"100%",borderRadius:4,width:`${s.weight*3}%`,background:"linear-gradient(90deg,var(--accent),var(--purple))"}}/></div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* SIP Projection */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div className="card" style={{padding:"15px 18px"}}>
+              <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13,marginBottom:12}}>SIP Growth Projection</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[1,3,5,10,15].filter(y=>y<=yrs*2).slice(0,5).map(y=>{
+                  const val=Math.round(sipAmt*12*((Math.pow(1+avgCagr/100,y)-1)/(avgCagr/100)));
+                  const inv=sipAmt*12*y;
+                  return(
+                    <div key={y} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid rgba(30,45,61,.5)"}}>
+                      <span style={{fontSize:11,color:"var(--text2)"}}>Year {y}</span>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:12,fontWeight:600,color:"var(--green)"}}>Rs.{val.toLocaleString("en-IN")}</div>
+                        <div style={{fontSize:9,color:"var(--text3)"}}>Invested: Rs.{inv.toLocaleString("en-IN")}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="card" style={{padding:"15px 18px"}}>
+              <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13,marginBottom:12}}>Sector Diversification</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[...new Set(portfolio.map(s=>s.sec))].map(sec=>{
+                  const wt=portfolio.filter(s=>s.sec===sec).reduce((a,s)=>a+s.weight,0);
+                  return(
+                    <div key={sec}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                        <span style={{fontSize:11,color:"var(--text2)"}}>{sec}</span>
+                        <span style={{fontSize:11,fontWeight:600,color:"var(--accent)"}}>{wt}%</span>
+                      </div>
+                      <div style={{background:"var(--bg2)",height:5,borderRadius:3}}>
+                        <div style={{height:"100%",borderRadius:3,width:`${wt}%`,background:"linear-gradient(90deg,var(--accent),var(--green))",transition:"width .8s"}}/>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{marginTop:14,padding:"10px 12px",background:"rgba(0,229,153,.06)",borderRadius:7,border:"1px solid rgba(0,229,153,.15)"}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:3}}>DIVERSIFICATION SCORE</div>
+                <div style={{fontSize:20,fontWeight:700,color:"var(--green)",fontFamily:"var(--fh)"}}>{Math.min(100,sectors.length*16+4)}/100</div>
+                <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{sectors.length} sectors · {portfolio.length} stocks</div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Thesis */}
+          <div className="card" style={{padding:"15px 18px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <div style={{fontFamily:"var(--fh)",fontWeight:700,fontSize:13}}>✦ AI Portfolio Thesis</div>
+              <button className="btn" onClick={getAiThesis} disabled={aiLoading} style={{padding:"6px 14px",fontSize:11}}>
+                {aiLoading?<><span className="spinner"/> Generating...</>:"Generate AI Thesis"}
+              </button>
+            </div>
+            {aiNote
+              ?<div style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.8}}>{aiNote}</div>
+              :<div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic"}}>Click "Generate AI Thesis" to get a personalised AI analysis of this portfolio.</div>
+            }
+          </div>
+
+          <div className="card" style={{padding:"12px 16px",background:"rgba(255,77,106,.04)",borderColor:"rgba(255,77,106,.15)"}}>
+            <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.7}}>
+              <strong style={{color:"var(--text2)"}}>Disclaimer:</strong> Portfolio suggestions are AI-generated and <strong style={{color:"var(--gold)"}}>not financial advice</strong>. CAGR projections are estimates based on historical averages. Actual returns may vary. Please consult a SEBI-registered advisor.
+            </div>
+          </div>
+        </>
+      )}
+
+      {!portfolio&&(
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:200,color:"var(--text3)",fontSize:13,flexDirection:"column",gap:8}}>
+          <div style={{fontSize:28}}>⊟</div>
+          <div>Enter your details above and click "Build AI Portfolio"</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App(){
   const [screen,setScreen]=useState("home");
-  const cur=NAVS.find(n=>n.id===screen);
+  const ALL_NAVS=[...NAVS,{id:"pb",label:"Portfolio Builder",ic:"⊟"},{id:"al",label:"Alerts",ic:"⊘"},{id:"st",label:"Settings",ic:"⚙"}];
+  const cur=ALL_NAVS.find(n=>n.id===screen)||NAVS[0];
   const render=()=>{
     if(screen==="home")return <Home/>;
     if(screen==="discover")return <Discover/>;
@@ -521,6 +752,7 @@ function App(){
     if(screen==="agent")return <Agent/>;
     if(screen==="funds")return <Funds/>;
     if(screen==="news")return <NewsScreen/>;
+    if(screen==="pb")return <PortfolioBuilder/>;
   };
   return(
     <div style={{display:"flex",height:"100vh",background:"var(--bg)",overflow:"hidden"}}>
@@ -544,7 +776,7 @@ function App(){
           ))}
           <div style={{fontSize:9,color:"var(--text3)",letterSpacing:".1em",padding:"14px 7px 4px",marginBottom:3}}>TOOLS</div>
           {[{id:"pb",label:"Portfolio Builder",ic:"⊟"},{id:"al",label:"Alerts",ic:"⊘"},{id:"st",label:"Settings",ic:"⚙"}].map(n=>(
-            <div key={n.id} className="nav"><span>{n.ic}</span><span>{n.label}</span></div>
+            <div key={n.id} className={`nav ${screen===n.id?"on":""}`} onClick={()=>setScreen(n.id)}><span>{n.ic}</span><span>{n.label}</span></div>
           ))}
         </div>
         <div style={{padding:"11px 15px",borderTop:"1px solid var(--border)",background:"rgba(0,212,255,.04)"}}>
@@ -556,8 +788,8 @@ function App(){
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{padding:"13px 22px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14,background:"var(--bg2)",flexShrink:0}}>
           <div>
-            <div style={{fontFamily:"var(--fh)",fontWeight:800,fontSize:16}}>{cur?.label}</div>
-            <div style={{fontSize:10,color:"var(--text3)"}}>{screen==="agent"?"Powered by Claude AI · Buffett + Graham + Lynch":"NSE · BSE · Indian & Global Markets · Real-time Analysis"}</div>
+            <div style={{fontFamily:"var(--fh)",fontWeight:800,fontSize:16}}>{cur?.label||"Dashboard"}</div>
+            <div style={{fontSize:10,color:"var(--text3)"}}>{screen==="agent"?"Powered by Claude AI · Buffett + Graham + Lynch":screen==="pb"?"AI-powered allocation · SIP simulation · CAGR projection":"NSE · BSE · Indian & Global Markets · Real-time Analysis"}</div>
           </div>
           <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
             <div style={{fontSize:11,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:6,padding:"5px 11px",display:"flex",alignItems:"center",gap:6}}>
