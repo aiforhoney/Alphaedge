@@ -69,29 +69,7 @@ textarea:focus,input:focus{border-color:var(--accent)}
 <script type="text/babel">
 const {useState,useEffect,useRef}=React;
 
-// ── Yahoo Finance symbol map (NSE stocks use .NS suffix) ──────────────────
-// To add more stocks: add ticker here + in TOP/STOCKS/UNIVERSE arrays below
-const YF_SYMBOLS={
-  "BAJFINANCE":"BAJFINANCE.NS",
-  "HDFCBANK":"HDFCBANK.NS",
-  "INFY":"INFY.NS",
-  "TITAN":"TITAN.NS",
-  "DEEPAKNTR":"DEEPAKNTR.NS",
-  "CDSL":"CDSL.NS",
-  "RELIANCE":"RELIANCE.NS",
-  "TCS":"TCS.NS",
-  "WIPRO":"WIPRO.NS",
-  "PAGEIND":"PAGEIND.NS",
-  "DMART":"DMART.NS",
-  "SBILIFE":"SBILIFE.NS",
-  "NIFTY50":"^NSEI",
-  "SENSEX":"^BSESN",
-  "NIFTYBANK":"^NSEBANK",
-  "NIFTYMID":"NIFTY_MID_SELECT.NS",
-  "NIFTYIT":"^CNXIT",
-};
-
-// ── Fallback prices (used when live fetch fails) ──────────────────────────
+// ── Fallback prices (used only if AI fetch fails) ────────────────────────
 const FALLBACK={
   "BAJFINANCE":7218,"HDFCBANK":1642,"INFY":1847,"TITAN":3290,
   "DEEPAKNTR":2614,"CDSL":1188,"RELIANCE":2946,"TCS":4121,
@@ -99,34 +77,69 @@ const FALLBACK={
   "NIFTY50":24362,"SENSEX":80218,"NIFTYBANK":52140,"NIFTYMID":18840,"NIFTYIT":39520,
 };
 
-// ── Live price fetcher using Yahoo Finance via allorigins proxy ───────────
-async function fetchYFPrices(tickers){
-  const symbols=tickers.map(t=>YF_SYMBOLS[t]||t+".NS").join(",");
-  const url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent`;
-  const proxy=`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+// ── Fetch live prices using Claude AI + web search ───────────────────────
+// Uses Anthropic API (no CORS issues) with web_search tool to get real prices
+async function fetchLivePricesViaAI(){
+  const prompt=`Search the web right now for current live NSE India stock prices and index values. 
+Find today's current market price for each of these:
+Stocks: HDFCBANK, INFY, BAJFINANCE, TITAN, DEEPAKNTR, PAGEIND, CDSL, RELIANCE, WIPRO, DMART, TCS, SBILIFE
+Indices: NIFTY 50, SENSEX, NIFTY BANK, NIFTY IT, NIFTY MIDCAP
+
+Return ONLY a raw JSON object (no explanation, no markdown, no backticks) in exactly this format:
+{
+  "HDFCBANK":{"price":1642.50,"change":12.30,"changePct":0.75,"up":true},
+  "INFY":{"price":1847.25,"change":-5.10,"changePct":-0.28,"up":false},
+  "BAJFINANCE":{"price":7218.00,"change":45.00,"changePct":0.63,"up":true},
+  "TITAN":{"price":3290.00,"change":20.00,"changePct":0.61,"up":true},
+  "DEEPAKNTR":{"price":2614.00,"change":30.00,"changePct":1.16,"up":true},
+  "PAGEIND":{"price":44320.00,"change":-100.00,"changePct":-0.22,"up":false},
+  "CDSL":{"price":1188.00,"change":8.00,"changePct":0.68,"up":true},
+  "RELIANCE":{"price":2946.00,"change":15.00,"changePct":0.51,"up":true},
+  "WIPRO":{"price":462.00,"change":3.00,"changePct":0.65,"up":true},
+  "DMART":{"price":4780.00,"change":-20.00,"changePct":-0.42,"up":false},
+  "TCS":{"price":4121.00,"change":25.00,"changePct":0.61,"up":true},
+  "SBILIFE":{"price":1572.00,"change":10.00,"changePct":0.64,"up":true},
+  "NIFTY50":{"price":24362.80,"change":187.40,"changePct":0.78,"up":true},
+  "SENSEX":{"price":80218.37,"change":641.12,"changePct":0.81,"up":true},
+  "NIFTYBANK":{"price":52140.60,"change":-124.30,"changePct":-0.24,"up":false},
+  "NIFTYIT":{"price":39520.10,"change":890.40,"changePct":2.31,"up":true},
+  "NIFTYMID":{"price":18840.25,"change":312.70,"changePct":1.69,"up":true}
+}
+Replace all values with actual current market prices you find. Return only the JSON, nothing else.`;
+
   try{
-    const res=await fetch(proxy,{signal:AbortSignal.timeout(8000)});
-    const json=await res.json();
-    const data=JSON.parse(json.contents);
-    const result={};
-    (data?.quoteResponse?.result||[]).forEach(q=>{
-      // reverse-map Yahoo symbol back to our ticker
-      const ticker=Object.keys(YF_SYMBOLS).find(k=>YF_SYMBOLS[k]===q.symbol)||q.symbol.replace(".NS","");
-      result[ticker]={
-        price:q.regularMarketPrice,
-        change:q.regularMarketChange,
-        changePct:q.regularMarketChangePercent,
-        up:q.regularMarketChange>=0,
-      };
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:1500,
+        tools:[{"type":"web_search_20250305","name":"web_search"}],
+        system:"You are a financial data fetcher. Search for live NSE/BSE Indian stock prices right now. Return ONLY a valid JSON object with no explanation, no markdown, no code blocks. Just raw JSON.",
+        messages:[{role:"user",content:prompt}]
+      })
     });
-    return result;
+    const data=await res.json();
+    // Claude may return multiple content blocks (text + tool_use). Extract all text.
+    const text=(data.content||[]).map(b=>b.type==="text"?b.text:"").join("");
+    // Find the JSON object in the response
+    const match=text.match(/\{[\s\S]*\}/);
+    if(match){
+      const parsed=JSON.parse(match[0]);
+      // Validate it has at least some stock keys we expect
+      if(parsed.HDFCBANK||parsed.NIFTY50||parsed.RELIANCE){
+        return parsed;
+      }
+    }
+    console.warn("AI returned unexpected format:",text);
+    return {};
   }catch(e){
-    console.warn("Live price fetch failed, using fallback prices",e);
+    console.warn("AI price fetch error:",e);
     return {};
   }
 }
 
-// ── Custom hook: fetches all prices on mount, refreshes every 5 minutes ──
+// ── Custom hook: fetches all prices on mount via AI, refreshes every 5 min ─
 function useLivePrices(){
   const ALL_TICKERS=["BAJFINANCE","HDFCBANK","INFY","TITAN","DEEPAKNTR","CDSL",
     "RELIANCE","TCS","WIPRO","PAGEIND","DMART","SBILIFE",
@@ -134,30 +147,36 @@ function useLivePrices(){
   const [prices,setPrices]=useState({});
   const [loading,setLoading]=useState(true);
   const [lastUpdated,setLastUpdated]=useState(null);
+  const [priceSource,setPriceSource]=useState("loading");
 
   const refresh=async()=>{
     setLoading(true);
-    const live=await fetchYFPrices(ALL_TICKERS);
-    // merge live over fallback so we always have a value
+    setPriceSource("loading");
+    const live=await fetchLivePricesViaAI();
+    const liveCount=Object.keys(live).length;
     const merged={};
     ALL_TICKERS.forEach(t=>{
-      merged[t]=live[t]||{
-        price:FALLBACK[t]||0,
-        change:0,changePct:0,up:true,fallback:true
-      };
+      if(live[t]){
+        merged[t]={...live[t],fallback:false};
+      }else{
+        merged[t]={price:FALLBACK[t]||0,change:0,changePct:0,up:true,fallback:true};
+      }
     });
     setPrices(merged);
     setLastUpdated(new Date());
     setLoading(false);
+    if(liveCount>=10) setPriceSource("live");
+    else if(liveCount>0) setPriceSource("partial");
+    else setPriceSource("fallback");
   };
 
   useEffect(()=>{
     refresh();
-    const interval=setInterval(refresh,5*60*1000); // refresh every 5 min
+    const interval=setInterval(refresh,5*60*1000);
     return()=>clearInterval(interval);
   },[]);
 
-  return{prices,loading,lastUpdated,refresh};
+  return{prices,loading,lastUpdated,refresh,priceSource};
 }
 
 // ── Helper: format price nicely ──────────────────────────────────────────
@@ -258,18 +277,26 @@ const ScoreBar=({score})=>{
   );
 };
 
-function Home({prices,pricesLoading,lastUpdated,onRefresh}){
+function Home({prices={},pricesLoading=false,priceSource="loading",lastUpdated=null,onRefresh}){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       {/* Live price status bar */}
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:7}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",
+        background:priceSource==="live"?"rgba(0,229,153,.06)":priceSource==="fallback"?"rgba(255,77,106,.06)":"rgba(0,212,255,.04)",
+        border:`1px solid ${priceSource==="live"?"rgba(0,229,153,.2)":priceSource==="fallback"?"rgba(255,77,106,.2)":"rgba(0,212,255,.15)"}`,
+        borderRadius:7}}>
         {pricesLoading
-          ?<><div className="spinner"/><span style={{fontSize:11,color:"var(--text3)"}}>Fetching live prices from Yahoo Finance...</span></>
-          :<><span className="dot-live"/><span style={{fontSize:11,color:"var(--green)"}}>Live prices loaded</span></>
+          ?<><div className="spinner"/><span style={{fontSize:11,color:"var(--text3)"}}>Fetching live prices via AI web search...</span></>
+          :<>
+            <span style={{fontSize:13}}>{priceSource==="live"?"✓":priceSource==="partial"?"⚠":"✗"}</span>
+            <span style={{fontSize:11,fontWeight:600,color:priceSource==="live"?"var(--green)":priceSource==="partial"?"var(--gold)":"var(--red)"}}>
+              {priceSource==="live"?"Live NSE prices loaded":priceSource==="partial"?"Partial live prices":"Using fallback prices — market may be closed"}
+            </span>
+            <span style={{fontSize:10,color:"var(--text3)"}}>· AI web search · NSE India</span>
+            {lastUpdated&&<span style={{fontSize:10,color:"var(--text3)"}}>· {lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>}
+            <button onClick={onRefresh} style={{marginLeft:"auto",padding:"3px 10px",background:"transparent",border:"1px solid var(--border)",borderRadius:5,fontSize:10,color:"var(--text3)",cursor:"pointer"}}>↻ Refresh</button>
+          </>
         }
-        {lastUpdated&&<span style={{fontSize:10,color:"var(--text3)",marginLeft:4}}>· Updated {lastUpdated.toLocaleTimeString("en-IN")}</span>}
-        {Object.values(prices)[0]?.fallback&&<span style={{fontSize:10,color:"var(--gold)",marginLeft:4}}>· Using fallback prices (market may be closed)</span>}
-        <button onClick={onRefresh} style={{marginLeft:"auto",padding:"3px 10px",background:"transparent",border:"1px solid var(--border)",borderRadius:5,fontSize:10,color:"var(--text3)",cursor:"pointer"}}>↻ Refresh</button>
       </div>
 
       {/* Index cards — live */}
@@ -654,16 +681,16 @@ function PortfolioBuilder(){
   // Yahoo Finance symbol = NSE ticker + ".NS"
   // fallback prices used if Yahoo fetch fails (updated periodically)
   const universe=[
-    {t:"HDFCBANK",  yf:"HDFCBANK.NS", n:"HDFC Bank",        sec:"Banking",      risk:"Low",    cagr:14, score:91, fallback:1642},
-    {t:"INFY",      yf:"INFY.NS",     n:"Infosys",           sec:"IT",           risk:"Low",    cagr:16, score:84, fallback:1847},
-    {t:"BAJFINANCE",yf:"BAJFINANCE.NS",n:"Bajaj Finance",    sec:"NBFC",         risk:"Medium", cagr:22, score:88, fallback:7218},
-    {t:"TITAN",     yf:"TITAN.NS",    n:"Titan Company",     sec:"Consumer",     risk:"Medium", cagr:20, score:87, fallback:3290},
-    {t:"DEEPAKNTR", yf:"DEEPAKNTR.NS",n:"Deepak Nitrite",    sec:"Chemicals",    risk:"Medium", cagr:18, score:79, fallback:2614},
-    {t:"PAGEIND",   yf:"PAGEIND.NS",  n:"Page Industries",   sec:"Consumer",     risk:"Low",    cagr:17, score:85, fallback:44320},
-    {t:"CDSL",      yf:"CDSL.NS",     n:"CDSL",              sec:"Financials",   risk:"Medium", cagr:19, score:82, fallback:1188},
-    {t:"RELIANCE",  yf:"RELIANCE.NS", n:"Reliance Inds",     sec:"Conglomerate", risk:"Low",    cagr:13, score:83, fallback:2946},
-    {t:"WIPRO",     yf:"WIPRO.NS",    n:"Wipro",             sec:"IT",           risk:"Low",    cagr:14, score:72, fallback:462},
-    {t:"DMART",     yf:"DMART.NS",    n:"Avenue Supermarts", sec:"Retail",       risk:"Low",    cagr:15, score:76, fallback:4780},
+    {t:"HDFCBANK",  n:"HDFC Bank",        sec:"Banking",      risk:"Low",    cagr:14, score:91, fallback:1642},
+    {t:"INFY",      n:"Infosys",           sec:"IT",           risk:"Low",    cagr:16, score:84, fallback:1847},
+    {t:"BAJFINANCE",n:"Bajaj Finance",     sec:"NBFC",         risk:"Medium", cagr:22, score:88, fallback:7218},
+    {t:"TITAN",     n:"Titan Company",     sec:"Consumer",     risk:"Medium", cagr:20, score:87, fallback:3290},
+    {t:"DEEPAKNTR", n:"Deepak Nitrite",    sec:"Chemicals",    risk:"Medium", cagr:18, score:79, fallback:2614},
+    {t:"PAGEIND",   n:"Page Industries",   sec:"Consumer",     risk:"Low",    cagr:17, score:85, fallback:44320},
+    {t:"CDSL",      n:"CDSL",              sec:"Financials",   risk:"Medium", cagr:19, score:82, fallback:1188},
+    {t:"RELIANCE",  n:"Reliance Inds",     sec:"Conglomerate", risk:"Low",    cagr:13, score:83, fallback:2946},
+    {t:"WIPRO",     n:"Wipro",             sec:"IT",           risk:"Low",    cagr:14, score:72, fallback:462},
+    {t:"DMART",     n:"Avenue Supermarts", sec:"Retail",       risk:"Low",    cagr:15, score:76, fallback:4780},
   ];
 
   const [amount,setAmount]=useState("100000");
@@ -678,39 +705,20 @@ function PortfolioBuilder(){
   const [priceTime,setPriceTime]=useState(null);
   const [priceSource,setPriceSource]=useState("fallback");
 
-  // Fetch a single stock price from Yahoo Finance via a CORS proxy
-  const fetchOnePrice=async(stock)=>{
-    // Try two CORS proxies in order; Yahoo Finance blocks direct browser calls
-    const proxies=[
-      `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${stock.yf}?interval=1d&range=1d`)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${stock.yf}?interval=1d&range=1d`)}`,
-    ];
-    for(const url of proxies){
-      try{
-        const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
-        if(!res.ok)continue;
-        const data=await res.json();
-        const price=data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if(price&&price>0)return Math.round(price*100)/100;
-      }catch(e){}
-    }
-    return null; // both proxies failed — use fallback
-  };
-
-  // Fetch all prices in parallel when component mounts or user clicks Refresh
+  // Fetch all prices using Claude AI web search (same method as global hook)
   const fetchAllPrices=async()=>{
     setPriceStatus("loading");
-    const results=await Promise.all(universe.map(s=>fetchOnePrice(s).then(p=>({t:s.t,p}))));
+    const live=await fetchLivePricesViaAI();
     const map={};
     let liveCount=0;
-    results.forEach(({t,p})=>{
-      if(p){map[t]=p;liveCount++;}
+    universe.forEach(s=>{
+      if(live[s.t]){map[s.t]=live[s.t].price;liveCount++;}
     });
     setLivePrices(map);
     setPriceTime(new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}));
-    if(liveCount===universe.length){setPriceStatus("done");setPriceSource("Yahoo Finance (NSE live)");}
-    else if(liveCount>0){setPriceStatus("partial");setPriceSource(`Yahoo Finance (${liveCount}/${universe.length} live, rest fallback)`);}
-    else{setPriceStatus("failed");setPriceSource("Fallback prices (Yahoo unavailable)");}
+    if(liveCount===universe.length){setPriceStatus("done");setPriceSource(`AI web search — all ${liveCount} prices live`);}
+    else if(liveCount>0){setPriceStatus("partial");setPriceSource(`AI web search — ${liveCount}/${universe.length} live, rest fallback`);}
+    else{setPriceStatus("failed");setPriceSource("Fallback prices — market closed or AI unavailable");}
   };
 
   useEffect(()=>{fetchAllPrices();},[]);
@@ -1002,12 +1010,12 @@ function PortfolioBuilder(){
 
 function App(){
   const [screen,setScreen]=useState("home");
-  const {prices,loading:pricesLoading,lastUpdated,refresh}=useLivePrices();
+  const {prices,loading:pricesLoading,lastUpdated,refresh,priceSource}=useLivePrices();
   const ALL_NAVS=[...NAVS,{id:"pb",label:"Portfolio Builder",ic:"⊟"},{id:"al",label:"Alerts",ic:"⊘"},{id:"st",label:"Settings",ic:"⚙"}];
   const cur=ALL_NAVS.find(n=>n.id===screen)||NAVS[0];
   const nifty=prices["NIFTY50"];
   const render=()=>{
-    if(screen==="home")return <Home prices={prices} pricesLoading={pricesLoading}/>;
+    if(screen==="home")return <Home prices={prices} pricesLoading={pricesLoading} priceSource={priceSource} lastUpdated={lastUpdated} onRefresh={refresh}/>;
     if(screen==="discover")return <Discover prices={prices} pricesLoading={pricesLoading}/>;
     if(screen==="analysis")return <Analysis/>;
     if(screen==="agent")return <Agent/>;
